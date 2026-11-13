@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cartelería Digital - Aliado Tech</title>
+    <style>
+        /* Variables de color dinámicas que se sobrescribirán con JS */
+        :root {
+            --color-primario: #333333;
+            --color-secundario: #555555;
+            --texto-claro: #ffffff;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0a0f1d; /* Fondo oscuro moderno */
+            color: var(--texto-claro);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Cabecera Corporativa */
+        .header {
+            background: linear-gradient(90deg, var(--color-primario), var(--color-secundario));
+            padding: 20px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .logo-img { height: 80px; object-fit: contain; }
+        .reloj { font-size: 2.5rem; font-weight: bold; }
+
+        /* Contenedor de Tarjetas de Rutas */
+        .board-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            padding: 30px;
+        }
+
+        /* Diseño Moderno de las Tarjetas (Estilo Aeropuerto) */
+        .ruta-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 8px solid var(--color-primario);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+
+        .destino { font-size: 2.5rem; font-weight: 900; text-transform: uppercase; margin-bottom: 10px; }
+        
+        .fila-datos { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+        
+        .hora, .precio { font-size: 1.8rem; font-weight: bold; color: #f1c40f; }
+
+        /* Chips de Estado */
+        .chip-estado {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: center;
+        }
+        .estado-atiempo { background-color: #27ae60; color: white; }
+        .estado-embarcando { background-color: #e67e22; color: white; }
+        .estado-agotado { background-color: #c0392b; color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <img id="logo-agencia" class="logo-img" src="" alt="Logo Agencia">
+        <div id="reloj-local" class="reloj">00:00</div>
+    </div>
+
+    <div id="board-container" class="board-container">
+        <!-- Las rutas se inyectarán aquí dinámicamente -->
+    </div>
+
+    <script>
+        // === 1. CONFIGURACIÓN ===
+        // PEGA AQUÍ LA URL GENERADA POR GOOGLE APPS SCRIPT
+        const API_URL = "https://script.google.com/macros/s/AKfycbwMMdszyfglMZRGyaybctYL3X6ekUDaTvGbBJJD-ZK3vWQWnFK65spELUrNhYiQTI2Zzg/execI"; 
+        
+        // Obtener parámetros de la URL del TV (ej: index.html?agencia=civa&pantalla=1)
+        const params = new URLSearchParams(window.location.search);
+        const agenciaFiltro = params.get('agencia') || 'civa'; // Civa por defecto para pruebas
+        const pantallaFiltro = params.get('pantalla'); // Puede ser null si es una sola pantalla
+
+        // === 2. FUNCIÓN PARA OBTENER DATOS ===
+        async function cargarDatos() {
+            try {
+                const respuesta = await fetch(`${API_URL}?agencia=${agenciaFiltro}`);
+                const datos = await respuesta.json();
+                
+                if (datos.agencia) {
+                    aplicarBranding(datos.agencia);
+                    renderizarRutas(datos.rutas);
+                }
+            } catch (error) {
+                console.error("Error al conectar con Google Sheets. Mostrando datos cacheados...", error);
+            }
+        }
+
+        // === 3. APLICAR COLORES Y LOGO ===
+        function aplicarBranding(agencia) {
+            document.documentElement.style.setProperty('--color-primario', agencia.colorPrimario);
+            document.documentElement.style.setProperty('--color-secundario', agencia.colorSecundario);
+            
+            const logoEl = document.getElementById('logo-agencia');
+            if (agencia.logo) logoEl.src = agencia.logo;
+        }
+
+        // === 4. DIBUJAR TARJETAS ===
+        function renderizarRutas(rutas) {
+            const contenedor = document.getElementById('board-container');
+            contenedor.innerHTML = ''; // Limpiar cartelera
+
+            // Filtrar si esta TV tiene un número asignado (ej: pantalla=1)
+            const rutasFiltradas = pantallaFiltro ? rutas.filter(r => r.asignacionPantalla == pantallaFiltro) : rutas;
+
+            rutasFiltradas.forEach(ruta => {
+                // Determinar el color del chip según el estado
+                let claseEstado = 'estado-atiempo';
+                let estadoTexto = ruta.estadoBus ? ruta.estadoBus.toLowerCase() : '';
+                if (estadoTexto.includes('embarcando')) claseEstado = 'estado-embarcando';
+                if (estadoTexto.includes('agotado') || estadoTexto.includes('cancelado')) claseEstado = 'estado-agotado';
+
+                const cardHTML = `
+                    <div class="ruta-card">
+                        <div class="destino">${ruta.destino}</div>
+                        <div class="fila-datos">
+                            <span class="hora">⏱ ${ruta.hora}</span>
+                            <span class="precio">S/ ${ruta.precio}</span>
+                        </div>
+                        <div class="fila-datos" style="margin-top: 15px;">
+                            <span class="chip-estado ${claseEstado}">${ruta.estadoBus || 'PROGRAMADO'}</span>
+                        </div>
+                    </div>
+                `;
+                contenedor.innerHTML += cardHTML;
+            });
+        }
+
+        // === 5. FUNCIONES SECUNDARIAS ===
+        // Reloj en tiempo real
+        setInterval(() => {
+            const ahora = new Date();
+            document.getElementById('reloj-local').textContent = ahora.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+        }, 1000);
+
+        // Actualizar la cartelera desde Google Sheets cada 1 minuto (60000 ms)
+        cargarDatos();
+        setInterval(cargarDatos, 60000);
+
+    </script>
+</body>
+</html>
