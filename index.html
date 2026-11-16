@@ -133,6 +133,44 @@
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
         }
     </style>
+
+    /* =======================================================
+           ADAPTACIÓN AUTOMÁTICA PARA PANTALLAS VERTICALES
+           ======================================================= */
+        @media (orientation: portrait) {
+            .header {
+                flex-direction: column; /* Apila el logo y el reloj hacia abajo */
+                text-align: center;
+                padding: 20px;
+                gap: 15px;
+            }
+            .agencia-info {
+                justify-content: center;
+            }
+            .reloj {
+                font-size: 2.5rem; /* Achica un poco el reloj para que encaje */
+            }
+            .board-container {
+                /* El secreto: Fuerza a que sea UNA SOLA COLUMNA hacia abajo */
+                grid-template-columns: 1fr; 
+                gap: 20px;
+                padding: 20px;
+                overflow-y: auto; /* Permite scroll si hay muchas rutas */
+            }
+            .ruta-card {
+                padding: 15px;
+            }
+            .destino {
+                font-size: 2.2rem;
+            }
+            .dato-valor {
+                font-size: 1.8rem;
+            }
+            .chip-estado {
+                font-size: 1.2rem;
+                padding: 10px;
+            }
+        }
 </head>
 <body>
 
